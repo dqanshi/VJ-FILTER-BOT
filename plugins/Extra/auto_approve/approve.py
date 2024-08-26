@@ -32,11 +32,15 @@ logging.basicConfig(
 
 
 
+from info import AUTH_CHANNEL
 
 
 # Define your pattern to validate channel IDs
 import re
 id_pattern = re.compile(r'^-100\d+$')  # Example pattern for Telegram channel IDs
+
+# main bot script
+auth_channel = AUTH_CHANNEL
 
 @Client.on_message(filters.private & filters.command("setfsub"))
 async def set_auth_channel(client, message):
