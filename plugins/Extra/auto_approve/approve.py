@@ -15,21 +15,71 @@ logger = logging.getLogger(__name__)
 
 BATCH_FILES = {}
 join_db = JoinReqs
+auto_approve_enabled = False
+
+ADMINS= 820596651
+
+# Configure logging to both file and console
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("bot_log.log"),  # Log to a file named bot_log.log
+        logging.StreamHandler()  # Also log to console
+    ]
+)
+
+
+
+
+
+
+
+
+
+
+
+
+@Client.on_message(filters.private & filters.command("approve"))
+async def toggle_auto_approve(client, message):
+    global auto_approve_enabled
+    command = message.command
+    if len(command) > 1:
+        if command[1].lower() == "on":
+            auto_approve_enabled = True
+            await message.reply("Auto-approve has been turned ON.")
+            logging.info("Auto-approve turned ON by user %s", message.from_user.id)
+        elif command[1].lower() == "off":
+            auto_approve_enabled = False
+            await message.reply("Auto-approve has been turned OFF.")
+            logging.info("Auto-approve turned OFF by user %s", message.from_user.id)
+        else:
+            await message.reply("Invalid command. Use /approve on or /approve off.")
+    else:
+        await message.reply("Please specify 'on' or 'off'. Example: /approve on")
 
 @Client.on_chat_join_request((filters.group | filters.channel))
 async def auto_approve(client, message: ChatJoinRequest):
-    if message.chat.id == AUTH_CHANNEL and join_db().isActive():
-        if REQUEST_TO_JOIN_MODE == False:
-            return 
-        ap_user_id = message.from_user.id
-        first_name = message.from_user.first_name
-        username = message.from_user.username
-        date = message.date
-        await join_db().add_user(user_id=ap_user_id, first_name=first_name, username=username, date=date)
-        if TRY_AGAIN_BTN == True:
-            return 
-        data = await db.get_msg_command(ap_user_id)
-        
+    global auto_approve_enabled
+    try:
+        if auto_approve_enabled:
+            if message.chat.id == AUTH_CHANNEL and join_db().isActive():
+                ap_user_id = message.from_user.id
+                first_name = message.from_user.first_name
+                username = message.from_user.username
+                date = message.date
+                await join_db().add_user(user_id=ap_user_id, first_name=first_name, username=username, date=date)
+                await client.approve_chat_join_request(message.chat.id, ap_user_id)
+                logging.info("Approved join request for user %s", ap_user_id)
+            else:
+                logging.info("Join request not approved: AUTH_CHANNEL mismatch or join_db inactive.")
+        else:
+            logging.info("Auto-approve is currently disabled.")
+    except Exception as e:
+        logging.error("Error in auto-approve: %s", str(e))
+        print(f"Error in auto-approve: {str(e)}")  # Print to consol
+       
+
         if data.split("-", 1)[0] == "VJ":
             user_id = int(data.split("-", 1)[1])
             vj = await referal_add_user(user_id, message.from_user.id)
