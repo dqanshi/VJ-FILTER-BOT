@@ -34,6 +34,31 @@ logging.basicConfig(
 
 
 
+# Define your pattern to validate channel IDs
+import re
+id_pattern = re.compile(r'^-100\d+$')  # Example pattern for Telegram channel IDs
+
+@Client.on_message(filters.private & filters.command("setfsub"))
+async def set_auth_channel(client, message):
+    global auth_channel
+    if len(message.command) == 2:
+        try:
+            new_channel_id = int(message.command[1])
+            # Check if the ID matches the expected format
+            if id_pattern.match(str(new_channel_id)):
+                auth_channel = new_channel_id
+                # Reinitialize the JoinReqs instance with the new channel ID
+                join_db = JoinReqs()
+                await message.reply(f"Auth channel has been updated to {auth_channel}.")
+                logging.info("Auth channel updated to %s by user %s", auth_channel, message.from_user.id)
+            else:
+                await message.reply("Invalid channel ID. Please provide a valid numeric ID.")
+        except ValueError:
+            await message.reply("Invalid input. Please provide a valid numeric channel ID.")
+    else:
+        await message.reply("Please provide a channel ID. Example: /setfsub -100123456789")
+
+
 
 
 
